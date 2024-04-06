@@ -1,41 +1,45 @@
-import requests
 from bs4 import BeautifulSoup
+import requests
 import re
 
-# URL of the web page
-url = "https://www.newindianexpress.com/nation/2024/Mar/29/bjp-financially-strangulating-oppn-parties-during-polls-time-congress-gets-fresh-it-notice-of-about-rs-1700-crore"
+def sanitize_filename(filename):
+    return re.sub(r'[<>:"/\\|?*]', '', filename)
 
-# Make a GET request to the URL
-response = requests.get(url)
-
-# Check if the request was successful (status code 200)
-if response.status_code == 200:
-    # Parse the HTML content using BeautifulSoup
+def scrape_article(url):
+    response = requests.get(url)
+    response.raise_for_status()  # Simplifies HTTP status check
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    # Extract text from the header <h1></h1> tag
-    section_content = soup.find('div', {'id': 'section', 'class': 'ie_single_story_container', 'data-env': 'production'})
-    h1_content = section_content.find('h1').text.strip()
+    headline = soup.select_one('.arr--story--headline-h1').text.strip()
+    sub_headline = soup.select_one('.p-alt').text.strip()
+    date_element = soup.select_one('time.arr__timeago')
+    date = date_element.text.strip() if date_element else "Date information not available"
 
-    pcl_full_content = soup.find('div', {'id': 'pcl-full-content', 'class': 'story_details'})
+    excluded_selectors = 'div.arr--element-container:nth-child(9) > div:nth-child(1) > div:nth-child(1) > p:nth-child(1) > strong:nth-child(1) > ins:nth-child(1) > a:nth-child(1), .r-1dqbpge > span:nth-child(1)'
+    content_elements = soup.select(f'p:not({excluded_selectors})')  # Direct exclusion using CSS selector
+    content = '\n\n'.join(element.text.strip() for element in content_elements)
 
-    # Check if sub_header <h2></h2> tags are found before accessing its text attribute
-    h2_element = pcl_full_content.find('h2')
-    h2_content = h2_element.text.strip() if h2_element else ""
+    markdown_content = f'''
+<span style="color:red"># {headline}</span>
 
-    # Find all <p></p> tags and extract their text content
-    p_elements = pcl_full_content.find_all('p')
-    p_contents = [p.text.strip() for p in p_elements]
+** {sub_headline}
+    
+**Date:**{date}
+    
+{content}
+'''
+    return markdown_content, headline
 
-    # Create a valid filename by replacing invalid characters with underscores
-    valid_filename = re.sub(r'[/:*?"<>|]', '_', h1_content.lower()) + '.md'
+def main():
+    url = input("Enter the URL of the article: ")
+    markdown_content, headline = scrape_article(url)
+    if markdown_content:
+        filename = '_'.join(headline.split()[:5])
+        filename = sanitize_filename(filename) or "scraped_article"
+        filename += ".md"
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(markdown_content)
+        print(f"Article scraped and saved as '{filename}'.")
 
-    # Save as Markdown file with the valid filename
-    with open(valid_filename, 'w', encoding='utf-8') as file:
-        file.write(f"# {h1_content}\n\n## {h2_content}\n\n")
-        for p_content in p_contents:
-            file.write(f"{p_content}\n\n")
-
-    print(f"Content saved to {valid_filename}")
-else:
-    print("Failed to retrieve the web page. Status code:", response.status_code)
+if __name__ == "__main__":
+    main()
