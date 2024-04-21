@@ -3,3 +3,11 @@ headline
 
 sub headline
 .p-alt
+
+
+Sanitization Integration: The filename sanitization is now more closely integrated with the filename creation, reducing the steps needed to sanitize and create the filename.
+Simplified Exclusion Logic: By assuming a more straightforward approach to excluding elements (e.g., using a class for exclusion), the code becomes cleaner and easier to maintain. This assumes that the actual HTML structure allows for such simplification.
+Streamlined Optional Element Text Extraction: The process for extracting text from the optional date element is simplified by combining the check and text extraction into a single line, reducing redundancy and improving readability.
+
+
+
